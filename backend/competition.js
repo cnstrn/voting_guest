@@ -1,9 +1,8 @@
-// yarisma mantigi ile ilgili socket eventlerini içerir
 const crypto = require('crypto');
 
 let competitions = {};
 
-// Yarisma kodu generate eder (6 haneli)
+// Competition code (6 digits)
 function generateCompetitionCode() {
     return crypto.randomBytes(3).toString('hex').toUpperCase();
 }
@@ -11,7 +10,7 @@ function generateCompetitionCode() {
 function handleSocketEvents(socket, io) {
 
     // Yarisma yaratma
-    socket.on('createCompetition', ({ name, date, criteria, projects, createdBy }) => {
+    socket.on('createCompetition', ({ name, date, criteria, projects, createdBy, juryVoteCoefficient }) => {
         const competitionId = generateCompetitionCode();  
         competitions[competitionId] = {
             name,
@@ -30,7 +29,8 @@ function handleSocketEvents(socket, io) {
             juryMembers: [],
             votingStarted: false,
             votingFinished: false,
-            resultsVisible: false
+            resultsVisible: false,
+            juryVoteCoefficient: juryVoteCoefficient || 2,  // katsayı atanmamışsa default value
         };
     
         console.log(`Competition created: ${competitionId}`, competitions[competitionId]);
@@ -39,7 +39,7 @@ function handleSocketEvents(socket, io) {
         socket.emit('competitionCreated', competitionId);
     });
 
-    // yarismaya katilma
+    // Yarismaya katilma
     socket.on('joinCompetition', ({ competitionId, name }) => {
         if (competitions[competitionId]) {
             const competition = competitions[competitionId];
@@ -58,7 +58,7 @@ function handleSocketEvents(socket, io) {
         }
     });
 
-    // competition data requesti
+    // Competition data request
     socket.on('requestCompetitionData', ({ competitionId }) => {
         const competition = competitions[competitionId];
         if (competition) {
@@ -70,7 +70,7 @@ function handleSocketEvents(socket, io) {
         }
     });
 
-    // Jury ataması
+    // Juri atamasi
     socket.on('updateJuryMembers', ({ competitionId, juryMembers }) => {
         if (competitions[competitionId]) {
             competitions[competitionId].juryMembers = juryMembers;
@@ -113,22 +113,27 @@ function handleSocketEvents(socket, io) {
         if (competition) {
             const project = competition.projects.find(p => p.id === projectId);
             if (project) {
+                // VotePage'den gelen finalScore
                 project.votes[userName] = finalScore;
+    
+                // comment yapılmışsa ekle
                 if (comment) {
                     project.comments.push({ userName, comment });
                 }
-
+    
+                // Update total score
                 project.totalScore += finalScore;
                 project.voteCount += 1;
                 project.averageScore = project.totalScore / project.voteCount;
-
+    
                 console.log(`User ${userName} voted on project ${projectId}: ${finalScore}`);
                 console.log(`Updated average score for project ${projectId}: ${project.averageScore}`);
-
+    
                 io.in(competitionId).emit('competitionData', competition);
             }
         }
     });
+    
 }
 
 module.exports = {

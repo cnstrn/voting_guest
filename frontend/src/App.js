@@ -15,7 +15,7 @@ function App() {
             <Route path="/competition/:competitionId" element={<CompetitionPage />} />
             <Route path="/nickname-entry/:competitionId" element={<NicknameEntryPage />} />
             <Route path="/competition/:competitionId/vote/:projectId" element={<VotePage />} />
-            <Route path="*" element={<LoginPage />} />  {/* Wildcard route moved to the bottom */}
+            <Route path="*" element={<LoginPage />} /> 
         </Routes>
     );
 }
